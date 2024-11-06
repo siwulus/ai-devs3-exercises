@@ -1,63 +1,63 @@
-import * as E from 'fp-ts/Either';
 import { pipe } from 'fp-ts/function';
 import * as O from 'fp-ts/Option';
-import { chain, fromEither, map, TaskEither } from 'fp-ts/TaskEither';
+import { chain, fromOption, TaskEither } from 'fp-ts/TaskEither';
 import { parseHTML } from 'linkedom';
-import { OpenAI } from 'openai';
-import { chainO, chainOS, mapO, tap, toPromise, tryExecute } from '../util/functional.ts';
+import { get, post } from '../infrustructure/httpClient';
+import { openAiClient } from '../infrustructure/openai';
+import { mapO, toPromise, tryExecute } from '../util/functional.ts';
+import { logPipe } from '../util/log.ts';
 
 const url = 'https://xyz.ag3nts.org/';
 const username = 'tester';
 const password = '574e112a';
 
-const fetchQuestion = (): TaskEither<Error, O.Option<string>> =>
+const fetchQuestion = (): TaskEither<Error, string> =>
   pipe(
-    tryExecute(() => fetch(url)),
-    chain(response => tryExecute(() => response.text())),
-    chain(html => fromEither(E.tryCatch(() => parseHTML(html), e => e as Error))),
-    map(({ document }) => O.fromNullable(document.querySelector('#human-question'))),
+    get(url, { responseFormat: 'text' }),
+    chain(html => tryExecute('parse html')(async () => {
+      const { document } = parseHTML(html);
+      return O.fromNullable(document.querySelector('#human-question'));
+    })),
     mapO(questionElement => O.fromNullable(questionElement.textContent)),
-    tap(console.log),
+    chain(fromOption(() => new Error('Question not found'))),
+    logPipe('Question: '),
   );
 
 
-const askLLM = (question: string): TaskEither<Error, O.Option<string>> =>
+const findAnswer = (question: string): TaskEither<Error, string> =>
   pipe(
-    tryExecute(() => new OpenAI().chat.completions.create({
+    openAiClient.completionWithFirstContent({
         messages: [{ role: 'system', content: 'Answer the question with number and only with number' }, {
           role: 'user',
           content: question,
         }],
         model: 'gpt-4o',
       },
-    )),
-    map(response => O.fromNullable(response.choices[0].message.content)),
-    tap(console.log),
+    ),
+    logPipe('Answer: '),
   );
 
-const sendForm = (answer: string): TaskEither<Error, void> =>
-  pipe(
-    tryExecute(() => {
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-      formData.append('answer', answer);
-      return fetch(url, {
-        method: 'POST',
-        body: formData,
-      });
-    }),
-    chain(response => tryExecute(() => response.text())),
-    tap(console.log),
-    chain(html => fromEither(E.tryCatch(() => parseHTML(html), e => e as Error))),
-    map(({ document }) => O.fromNullable(document.querySelector('h2'))),
+const sendForm = (answer: string): TaskEither<Error, string> => {
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('password', password);
+  formData.append('answer', answer);
+  return pipe(
+    post(url, formData, { payloadAsFormData: true, responseFormat: 'text' }),
+    chain(html => tryExecute('parse form response')(async () => {
+      const { document } = parseHTML(html);
+      return O.fromNullable(document.querySelector('h2'));
+    })),
     mapO(flag => O.fromNullable(flag.textContent)),
-    tap(console.log),
+    chain(fromOption(() => new Error('Flag not found'))),
+    logPipe('Flag'),
   );
+};
+
 
 await pipe(
   fetchQuestion(),
-  chainO(askLLM),
-  chainOS(sendForm),
+  chain(findAnswer),
+  chain(sendForm),
   toPromise,
 );

@@ -1,9 +1,16 @@
 import { pipe } from 'fp-ts/function';
 import { isSome, none, Option, some } from 'fp-ts/Option';
-import { chain, map, matchE, right, TaskEither, tryCatch } from 'fp-ts/TaskEither';
+import { chain, fromOption, left, map, matchE, right, TaskEither, tryCatch } from 'fp-ts/TaskEither';
 
-export const tryExecute = <E, T>(lazy: () => Promise<T>): TaskEither<Error, T> =>
-  tryCatch(lazy, err => err as Error);
+export const tryExecute = (name: string) => <E, T>(lazy: () => Promise<T>): TaskEither<Error, T> =>
+  tryCatch(lazy, (err) =>  {
+    if (err instanceof Error) {
+      console.error(`| ${name} | ${err.message}`, err);
+      return err;
+    }
+    console.error(`| ${name} |`, err);
+    return new Error(String(err));
+  });
 
 export const tap =
   <E, T>(f: (t: T) => void) =>
