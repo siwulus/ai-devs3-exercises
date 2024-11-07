@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "exercise1": "bun src/exercise1/index.ts",
-    "exercise2": "bun src/exercise2/index.ts"
+    "exercise2": "bun src/exercise2/index.ts",
+    "exercise3": "bun src/exercise3/index.ts"
   },
   "dependencies": {
     "bun": "latest",

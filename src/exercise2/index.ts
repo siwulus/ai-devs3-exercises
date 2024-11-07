@@ -8,7 +8,7 @@ import { openAiClient } from '../infrustructure/openai';
 import { toPromise } from '../util/functional.ts';
 import { logPipe } from '../util/log.ts';
 
-const robotEndpoint = 'https://xyz.ag3nts.org/verify';
+const robotEndpoint = `${process.env.XYZ_AGENTS_URL}/verify`;
 
 const robotMessage = z.object({
   msgID: z.number(),
@@ -38,19 +38,38 @@ const talkWithRobot = (msg: RobotMessage, limit: number = 10): TaskEither<Error,
     speakToRobot(msg),
     chain((response: RobotResponse) =>
       match(response)
-        .with({ msgID: P.number, text: P.string }, ({ msgID, text }) => thinkAndRespond(limit)({ msgID, text }))
-        .otherwise(({ code, message }) => left(new Error(`Incorrect response from robot: code: ${code}, ${message}`)))),
+        .with({ msgID: P.number, text: P.string }, ({ msgID, text }) =>
+          thinkAndRespond(limit)({ msgID, text }),
+        )
+        .otherwise(({ code, message }) =>
+          left(new Error(`Incorrect response from robot: code: ${code}, ${message}`)),
+        ),
+    ),
   );
 
-const thinkAndRespond = (limit: number) => ({ msgID, text }: RobotMessage): TaskEither<Error, RobotResponse> =>
-  match({ msgID, limit, text })
-    .with({ text: P.string.regex(/{{FLG:[^}]*}}/g) }, ({ text }) => pipe(right({ msgID, text }), logPipe('Flag is: ')))
-    .with({ msgID: 0 }, () => left(new Error(`Robot doesn't want to talk with me!`)))
-    .with({ limit: P.number.gt(0) }, () => pipe(findTheAnswer(text), chain(response => talkWithRobot({
-      msgID,
-      text: response,
-    }, limit - 1))))
-    .otherwise(() => left(new Error(`Conversation finished without success`)));
+const thinkAndRespond =
+  (limit: number) =>
+  ({ msgID, text }: RobotMessage): TaskEither<Error, RobotResponse> =>
+    match({ msgID, limit, text })
+      .with({ text: P.string.regex(/{{FLG:[^}]*}}/g) }, ({ text }) =>
+        pipe(right({ msgID, text }), logPipe('Flag is: ')),
+      )
+      .with({ msgID: 0 }, () => left(new Error(`Robot doesn't want to talk with me!`)))
+      .with({ limit: P.number.gt(0) }, () =>
+        pipe(
+          findTheAnswer(text),
+          chain(response =>
+            talkWithRobot(
+              {
+                msgID,
+                text: response,
+              },
+              limit - 1,
+            ),
+          ),
+        ),
+      )
+      .otherwise(() => left(new Error(`Conversation finished without success`)));
 
 const findTheAnswer = (question: string): TaskEither<Error, string> => {
   const messages: ChatCompletionMessageParam[] = [
@@ -73,9 +92,4 @@ const systemPrompt: string = `Answer the user question. Follow the rules.
 </context>
 `;
 
-await pipe(
-  talkWithRobot({ msgID: 0, text: 'READY' }),
-  toPromise,
-);
-
-
+await pipe(talkWithRobot({ msgID: 0, text: 'READY' }), toPromise);
