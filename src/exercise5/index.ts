@@ -27,7 +27,7 @@ const anonymizeData = (data: string): TaskEither<Error, string> =>
     }),
   );
 
-pipe(
+await pipe(
   getData(inputDataUrl),
   chain(anonymizeData),
   logPipe('Anonymised'),

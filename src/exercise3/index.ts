@@ -125,7 +125,7 @@ const recalibrate = (input: CalibrationData): TaskEither<Error, CalibrationData>
     'test-data': recalibrateDataSet(input['test-data']),
   });
 
-pipe(
+await pipe(
   getCalibrationDataInput(inputDataUrl, process.env.AI_DEV3_API_KEY ?? '<unknown>'),
   chain(recalibrate),
   //tap(data => writeFileSync('calibrated.json', JSON.stringify(data, null, 2))),
