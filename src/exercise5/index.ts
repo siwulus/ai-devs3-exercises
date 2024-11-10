@@ -1,7 +1,9 @@
 import { pipe } from 'fp-ts/function';
 import { chain, TaskEither } from 'fp-ts/TaskEither';
+import { LangfuseParent } from 'langfuse';
 import { reportToHeadquarter } from '../infrustructure/headquoter';
 import { get } from '../infrustructure/httpClient';
+import { withTrace } from '../infrustructure/langfuse';
 import { customOpenAiClient } from '../infrustructure/openai';
 import { toPromise } from '../util/functional.ts';
 import { logPipe } from '../util/log.ts';
@@ -12,25 +14,34 @@ const openAiClient = customOpenAiClient({ baseURL: process.env.LM_STUDIO_BASE_UR
 
 const getData = (url: string): TaskEither<Error, string> => get(url, { responseFormat: 'text' });
 
-const anonymizeData = (data: string): TaskEither<Error, string> =>
-  pipe(
-    openAiClient.completionWithFirstContent({
-      messages: [
-        { role: 'system', content: systemPrompt },
+const anonymizeData =
+  (langfuseParent: LangfuseParent) =>
+  (data: string): TaskEither<Error, string> =>
+    pipe(
+      openAiClient.completionWithFirstContent(
         {
-          role: 'user',
-          content: data,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            {
+              role: 'user',
+              content: data,
+            },
+          ],
+          model: 'llama-3.2-3b-instruct:2',
+          //model: 'gemma-2-2b-it',
         },
-      ],
-      model: 'llama-3.2-3b-instruct:2',
-      //model: 'gemma-2-2b-it',
-    }),
-  );
+        langfuseParent,
+      ),
+    );
 
 await pipe(
-  getData(inputDataUrl),
-  chain(anonymizeData),
-  logPipe('Anonymised'),
-  chain(reportToHeadquarter('CENZURA')),
+  withTrace({ name: 'AnonymizeData' })(trace =>
+    pipe(
+      getData(inputDataUrl),
+      chain(anonymizeData(trace)),
+      logPipe('Anonymised'),
+      chain(reportToHeadquarter('CENZURA')),
+    ),
+  ),
   toPromise,
 );

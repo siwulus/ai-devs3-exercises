@@ -1,6 +1,7 @@
 import { pipe } from 'fp-ts/function';
 import * as O from 'fp-ts/Option';
 import { chain, fromOption, TaskEither } from 'fp-ts/TaskEither';
+import { LangfuseConfig, LangfuseParent, observeOpenAI } from 'langfuse';
 import { OpenAI } from 'openai';
 import {
   ChatCompletion,
@@ -21,9 +22,14 @@ const openai = new OpenAI();
 
 const completionWithFirstContent =
   (openai: OpenAI) =>
-  (params: ChatCompletionCreateParamsNonStreaming): TaskEither<Error, string> =>
+  (
+    params: ChatCompletionCreateParamsNonStreaming,
+    langfuseParent?: LangfuseParent,
+  ): TaskEither<Error, string> =>
     pipe(
-      tryExecute('openai.chat.completions.create')(() => openai.chat.completions.create(params)),
+      tryExecute('openai.chat.completions.create')(() =>
+        observeOpenAI(openai, buildLangfuseConfig(langfuseParent)).chat.completions.create(params),
+      ),
       chain((result: ChatCompletion) =>
         pipe(
           O.fromNullable(result.choices[0].message.content),
@@ -31,6 +37,9 @@ const completionWithFirstContent =
         ),
       ),
     );
+
+const buildLangfuseConfig = (parent?: LangfuseParent): LangfuseConfig | undefined =>
+  parent ? { parent } : undefined;
 
 export const openAiClient = {
   completionWithFirstContent: completionWithFirstContent(openai),

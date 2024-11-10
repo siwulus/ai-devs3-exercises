@@ -12,10 +12,12 @@ import {
   sequenceSeqArray,
   TaskEither,
 } from 'fp-ts/TaskEither';
+import { LangfuseParent } from 'langfuse';
 import { match, P } from 'ts-pattern';
 import { z } from 'zod';
 import { reportToHeadquarter } from '../infrustructure/headquoter';
 import { get } from '../infrustructure/httpClient';
+import { withSpan, withTrace } from '../infrustructure/langfuse';
 import { openAiClient } from '../infrustructure/openai';
 import { toPromise } from '../util/functional.ts';
 
@@ -49,24 +51,26 @@ const getCalibrationDataInput = (url: string, apikey: string): TaskEither<Error,
     map(data => ({ ...data, apikey })),
   );
 
-const recalibrateData = (input: TestData): TaskEither<Error, TestData> =>
-  match(input)
-    .with({ question: P.string.regex(mathTestRegexp), test: { a: P.nonNullable } }, data =>
-      pipe(
-        sequenceS(ApplySeq)({
-          answer: recalculateMath(data.question),
-          a: recalibrateAnswer(data.test.q),
-        }),
-        map(({ answer, a }) => ({ ...data, answer, test: { ...data.test, a } })),
-      ),
-    )
-    .with({ question: P.string.regex(mathTestRegexp) }, data =>
-      pipe(
-        recalculateMath(data.question),
-        map(answer => ({ ...data, answer })),
-      ),
-    )
-    .otherwise(() => left(new Error(`Invalid Test Data data: ${JSON.stringify(input)}`)));
+const recalibrateData =
+  (trace: LangfuseParent) =>
+  (input: TestData): TaskEither<Error, TestData> =>
+    match(input)
+      .with({ question: P.string.regex(mathTestRegexp), test: { a: P.nonNullable } }, data =>
+        pipe(
+          sequenceS(ApplySeq)({
+            answer: recalculateMath(data.question),
+            a: recalibrateAnswer(data.test.q, trace),
+          }),
+          map(({ answer, a }) => ({ ...data, answer, test: { ...data.test, a } })),
+        ),
+      )
+      .with({ question: P.string.regex(mathTestRegexp) }, data =>
+        pipe(
+          recalculateMath(data.question),
+          map(answer => ({ ...data, answer })),
+        ),
+      )
+      .otherwise(() => left(new Error(`Invalid Test Data data: ${JSON.stringify(input)}`)));
 
 const recalculateMath = (question: string): TaskEither<Error, number> =>
   pipe(
@@ -99,36 +103,48 @@ const recalculateMath = (question: string): TaskEither<Error, number> =>
     ),
   );
 
-const recalibrateAnswer = (question: string): TaskEither<Error, string> =>
-  openAiClient.completionWithFirstContent({
-    messages: [
-      {
-        role: 'system',
-        content: 'Answer the user question, be precise and concise',
-      },
-      {
-        role: 'user',
-        content: question,
-      },
-    ],
-    model: 'gpt-4o',
-  });
+const recalibrateAnswer = (question: string, trace: LangfuseParent): TaskEither<Error, string> =>
+  openAiClient.completionWithFirstContent(
+    {
+      messages: [
+        {
+          role: 'system',
+          content: 'Answer the user question, be precise and concise',
+        },
+        {
+          role: 'user',
+          content: question,
+        },
+      ],
+      model: 'gpt-4o',
+    },
+    trace,
+  );
 
-const recalibrateDataSet = (data: TestData[]): TaskEither<Error, TestData[]> =>
-  pipe(sequenceSeqArray(data.map(recalibrateData)), map(RA.toArray));
+const recalibrateDataSet = (
+  data: TestData[],
+  trace: LangfuseParent,
+): TaskEither<Error, TestData[]> =>
+  pipe(sequenceSeqArray(data.map(recalibrateData(trace))), map(RA.toArray));
 
-const recalibrate = (input: CalibrationData): TaskEither<Error, CalibrationData> =>
-  sequenceS(ApplySeq)({
-    'apikey': of(input.apikey),
-    'description': of(input.description),
-    'copyright': of(input.copyright),
-    'test-data': recalibrateDataSet(input['test-data']),
-  });
+const recalibrate =
+  (trace: LangfuseParent) =>
+  (input: CalibrationData): TaskEither<Error, CalibrationData> =>
+    sequenceS(ApplySeq)({
+      'apikey': of(input.apikey),
+      'description': of(input.description),
+      'copyright': of(input.copyright),
+      'test-data': recalibrateDataSet(input['test-data'], trace),
+    });
 
 await pipe(
-  getCalibrationDataInput(inputDataUrl, process.env.AI_DEV3_API_KEY ?? '<unknown>'),
-  chain(recalibrate),
-  //tap(data => writeFileSync('calibrated.json', JSON.stringify(data, null, 2))),
-  chain(reportToHeadquarter('JSON')),
+  withTrace({ name: 'RecalibrateData' })(trace =>
+    pipe(
+      getCalibrationDataInput(inputDataUrl, process.env.AI_DEV3_API_KEY ?? '<unknown>'),
+      chain(recalibrate(trace)),
+      //tap(data => writeFileSync('calibrated.json', JSON.stringify(data, null, 2))),
+      chain(withSpan('Report to Headquarter', trace)(reportToHeadquarter('JSON'))),
+    ),
+  ),
   toPromise,
 );
