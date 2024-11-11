@@ -3,10 +3,11 @@
   "module": "src/index.ts",
   "type": "module",
   "scripts": {
-    "exercise1": "bun src/exercise1/index.ts",
-    "exercise2": "bun src/exercise2/index.ts",
-    "exercise3": "bun src/exercise3/index.ts",
-    "exercise5": "bun src/exercise5/index.ts"
+    "S01E01": "bun src/S01E01/index.ts",
+    "S01E02": "bun src/S01E02/index.ts",
+    "S01E03": "bun src/S01E03/index.ts",
+    "S01E05": "bun src/S01E05/index.ts",
+    "S02E01": "bun src/S02E01/index.ts"
   },
   "dependencies": {
     "bun": "latest",

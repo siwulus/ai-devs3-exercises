@@ -1,14 +1,16 @@
 import { pipe } from 'fp-ts/function';
 import * as O from 'fp-ts/Option';
-import { chain, fromOption, TaskEither } from 'fp-ts/TaskEither';
+import { chain, fromOption, map, TaskEither } from 'fp-ts/TaskEither';
 import { LangfuseConfig, LangfuseParent, observeOpenAI } from 'langfuse';
 import { OpenAI } from 'openai';
+import { TranscriptionCreateParams } from 'openai/resources/audio';
 import {
   ChatCompletion,
   ChatCompletionCreateParamsNonStreaming,
 } from 'openai/resources/chat/completions';
 import { z } from 'zod';
 import { tryExecute } from '../../util/functional.ts';
+import { logPipe } from '../../util/log.ts';
 
 export const OpenAIParams = z.object({
   baseURL: z.string().optional(),
@@ -36,13 +38,32 @@ const completionWithFirstContent =
           fromOption(() => new Error('No content in response')),
         ),
       ),
+      logPipe('Chat completion response'),
     );
+
+const speachToText =
+  (openai: OpenAI) =>
+  (
+    params: TranscriptionCreateParams,
+    langfuseParent?: LangfuseParent,
+  ): TaskEither<Error, string> => {
+    console.log('speachToText', params);
+    return pipe(
+      tryExecute('OpenAI speach to text')(() =>
+        observeOpenAI(openai, buildLangfuseConfig(langfuseParent)).audio.transcriptions.create(
+          params,
+        ),
+      ),
+      map(({ text }) => text),
+    );
+  };
 
 const buildLangfuseConfig = (parent?: LangfuseParent): LangfuseConfig | undefined =>
   parent ? { parent } : undefined;
 
 export const openAiClient = {
   completionWithFirstContent: completionWithFirstContent(openai),
+  speachToText: speachToText(openai),
 };
 
 export const customOpenAiClient = (params: OpenAIParams) => ({
