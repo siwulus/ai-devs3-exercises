@@ -96,7 +96,7 @@ const witnessesQuestioning = (testimonialsPath: string): TaskEither<Error, strin
               { role: 'system', content: buildSystemPrompt(testimonials) },
               {
                 role: 'user',
-                content: `What is the Andrzej Maj's university street name, answer with the street name`,
+                content: `Andrzej Maj works on university, try to deduce the street name of his faculty or institute where he belongs. Answer only with street name`,
               },
             ],
             model: 'gpt-4o',
