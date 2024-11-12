@@ -1,17 +1,16 @@
-import { write } from 'bun';
-import * as A from 'fp-ts/Array';
-import RA from 'fp-ts/ReadonlyArray';
 import { pipe } from 'fp-ts/function';
+import RA from 'fp-ts/ReadonlyArray';
 import { chain, left, map, of, sequenceSeqArray, TaskEither } from 'fp-ts/TaskEither';
 import { LangfuseParent } from 'langfuse';
 import { Dirent } from 'node:fs';
-import { readdir, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { toFile } from 'openai';
 import * as path from 'path';
+import { getFileNames, saveTextFile } from '../infrustructure/filesystem';
 import { reportToHeadquarter } from '../infrustructure/headquoter';
 import { withTrace } from '../infrustructure/langfuse';
 import { openAiClient } from '../infrustructure/openai';
-import { tap, toPromise, tryExecute } from '../util/functional.ts';
+import { toPromise, tryExecute } from '../util/functional.ts';
 import { buildSystemPrompt } from './prompt.ts';
 
 const transcribeTestimonials = (dirPath: string) =>
@@ -23,22 +22,10 @@ const transcribeTestimonials = (dirPath: string) =>
           files.map(file =>
             pipe(
               transcribeTestimonial(file, trace),
-              chain(saveFile(path.join(dirPath), file.name + '.txt')),
+              chain(saveTextFile(path.join(dirPath), file.name + '.txt')),
             ),
           ),
         ),
-      ),
-    ),
-  );
-
-const getFileNames = (path: string, extension: string): TaskEither<Error, Dirent[]> =>
-  pipe(
-    tryExecute('Read testimonials audio directory')(() => readdir(path, { withFileTypes: true })),
-    map(dirents =>
-      pipe(
-        dirents,
-        A.filter(v => v.isFile()),
-        A.filter(v => v.name.endsWith(extension)),
       ),
     ),
   );
@@ -61,15 +48,6 @@ const transcribeTestimonial = (
       ),
     ),
   );
-
-const saveFile =
-  (parentPath: string, name: string) =>
-  (content: string): TaskEither<Error, string> =>
-    pipe(
-      tryExecute('Save file')(() => write(path.join(parentPath, name), content)),
-      tap(() => console.log(`Saved file ${path.join(parentPath, name)}`)),
-      map(() => path.join(parentPath, name)),
-    );
 
 const getTestimonials = (dirPath: string): TaskEither<Error, string[]> =>
   pipe(
@@ -114,12 +92,12 @@ const extractAnswer = (text: string): TaskEither<Error, string> => {
 };
 
 // await pipe(
-//   transcribeTestimonials(path.join(process.cwd(), 'src', 'S02E01', 'testimonials')),
+//   transcribeTestimonials(path.join(__dirname, 'testimonials')),
 //   toPromise,
 // );
 
 await pipe(
-  witnessesQuestioning(path.join(process.cwd(), 'src', 'S02E01', 'testimonials')),
+  witnessesQuestioning(path.join(__dirname, 'testimonials')),
   chain(reportToHeadquarter('mp3')),
   toPromise,
 );
