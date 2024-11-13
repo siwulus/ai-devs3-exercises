@@ -8,6 +8,7 @@ import {
   ChatCompletion,
   ChatCompletionCreateParamsNonStreaming,
 } from 'openai/resources/chat/completions';
+import { Image, ImageGenerateParams } from 'openai/resources/images';
 import { z } from 'zod';
 import { tryExecute } from '../../util/functional.ts';
 import { logPipe } from '../../util/log.ts';
@@ -58,12 +59,24 @@ const speachToText =
     );
   };
 
+const generateOneImage =
+  (openai: OpenAI) =>
+  (params: ImageGenerateParams, langfuseParent?: LangfuseParent): TaskEither<Error, Image> =>
+    pipe(
+      tryExecute('openai.images.create')(() =>
+        observeOpenAI(openai, buildLangfuseConfig(langfuseParent)).images.generate(params),
+      ),
+      map(({ data }) => O.fromNullable(data[0])),
+      chain(fromOption(() => new Error('No image in response'))),
+    );
+
 const buildLangfuseConfig = (parent?: LangfuseParent): LangfuseConfig | undefined =>
   parent ? { parent } : undefined;
 
 export const openAiClient = {
   completionWithFirstContent: completionWithFirstContent(openai),
   speachToText: speachToText(openai),
+  generateOneImage: generateOneImage(openai),
 };
 
 export const customOpenAiClient = (params: OpenAIParams) => ({
