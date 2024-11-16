@@ -2,13 +2,14 @@ import { pipe } from 'fp-ts/function';
 import * as O from 'fp-ts/Option';
 import { chain, fromOption, map, TaskEither } from 'fp-ts/TaskEither';
 import { LangfuseConfig, LangfuseParent, observeOpenAI } from 'langfuse';
-import { OpenAI } from 'openai';
+import { OpenAI, toFile } from 'openai';
 import { TranscriptionCreateParams } from 'openai/resources/audio';
 import {
   ChatCompletion,
   ChatCompletionCreateParamsNonStreaming,
 } from 'openai/resources/chat/completions';
 import { Image, ImageGenerateParams } from 'openai/resources/images';
+import { FileLike } from 'openai/uploads';
 import { z } from 'zod';
 import { tryExecute } from '../../util/functional.ts';
 import { logPipe } from '../../util/log.ts';
@@ -82,3 +83,6 @@ export const openAiClient = {
 export const customOpenAiClient = (params: OpenAIParams) => ({
   completionWithFirstContent: completionWithFirstContent(new OpenAI(params)),
 });
+
+export const toOpenAiFile = (buffer: Buffer, name: string): TaskEither<Error, FileLike> =>
+  tryExecute('Buffer to OpenAI file')(() => toFile(buffer, name));
