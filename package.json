@@ -11,7 +11,8 @@
     "S02E02": "bun src/S02E02/index.ts",
     "S02E03": "bun src/S02E03/index.ts",
     "S02E04": "bun src/S02E04/index.ts",
-    "S02E05": "bun src/S02E05/index.ts"
+    "S02E05": "bun src/S02E05/index.ts",
+    "S03E01": "bun src/S03E01/index.ts"
   },
   "dependencies": {
     "bun": "latest",

@@ -1,10 +1,12 @@
 import { pipe } from 'fp-ts/function';
-import { map, TaskEither } from 'fp-ts/TaskEither';
+import * as RA from 'fp-ts/ReadonlyArray';
+import { chain, map, sequenceArray, TaskEither } from 'fp-ts/TaskEither';
 import { Dirent } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'path';
 import { match, P } from 'ts-pattern';
 import { tryExecute } from '../../util/functional.ts';
+import { getFileNames } from './files.ts';
 import { AudioFileContent, ImageFileContent, TextFileContent } from './types.ts';
 
 export const getTextFileContent = ({
@@ -14,6 +16,16 @@ export const getTextFileContent = ({
   pipe(
     tryExecute('Read file as utf-8 text')(() => readFile(path.join(parentPath, name), 'utf-8')),
     map(text => ({ parentPath, name, text })),
+  );
+
+export const getTextFilesContent = (
+  dirPath: string,
+  extension: string = '.txt',
+): TaskEither<Error, TextFileContent[]> =>
+  pipe(
+    getFileNames(dirPath, extension),
+    chain(fileNames => sequenceArray(fileNames.map(getTextFileContent))),
+    map(RA.toArray),
   );
 
 export const getAudioFileContent = ({
