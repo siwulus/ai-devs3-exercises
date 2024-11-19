@@ -4,6 +4,7 @@ import { chain, fromOption, map, TaskEither } from 'fp-ts/TaskEither';
 import { LangfuseConfig, LangfuseParent, observeOpenAI } from 'langfuse';
 import { OpenAI, toFile } from 'openai';
 import { TranscriptionCreateParams } from 'openai/resources/audio';
+import { EmbeddingCreateParams, Embedding } from 'openai/resources/embeddings';
 import {
   ChatCompletion,
   ChatCompletionCreateParamsNonStreaming,
@@ -11,7 +12,7 @@ import {
 import { Image, ImageGenerateParams } from 'openai/resources/images';
 import { FileLike } from 'openai/uploads';
 import { z } from 'zod';
-import { tryExecute } from '../../util/functional.ts';
+import { tap, tryExecute } from '../../util/functional.ts';
 import { logPipe } from '../../util/log.ts';
 
 export const OpenAIParams = z.object({
@@ -71,6 +72,20 @@ const generateOneImage =
       chain(fromOption(() => new Error('No image in response'))),
     );
 
+const createEmbeddings =
+  (openai: OpenAI) =>
+  (
+    params: EmbeddingCreateParams,
+    langfuseParent?: LangfuseParent,
+  ): TaskEither<Error, Embedding[]> =>
+    pipe(
+      tryExecute('openai.embeddings.create')(() =>
+        observeOpenAI(openai, buildLangfuseConfig(langfuseParent)).embeddings.create(params),
+      ),
+      map(({ data }) => data),
+      tap(() => console.log('Embeddings created')),
+    );
+
 const buildLangfuseConfig = (parent?: LangfuseParent): LangfuseConfig | undefined =>
   parent ? { parent } : undefined;
 
@@ -78,6 +93,7 @@ export const openAiClient = {
   completionWithFirstContent: completionWithFirstContent(openai),
   speachToText: speachToText(openai),
   generateOneImage: generateOneImage(openai),
+  createEmbeddings: createEmbeddings(openai),
 };
 
 export const customOpenAiClient = (params: OpenAIParams) => ({

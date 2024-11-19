@@ -173,6 +173,5 @@ dist
 # Finder (MacOS) folder config
 .DS_Store
 
-src/infrustructure/qdrant
 src/exercises/people/people.json
 src/exercises/search/archiwum.json
