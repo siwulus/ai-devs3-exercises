@@ -29,7 +29,7 @@ const askLLM =
     pipe(
       validateLimit(limit),
       chain(() =>
-        openAiClient.completionWithFirstContent(
+        openAiClient.completionWithText(
           {
             model: 'gpt-4o',
             messages: [...history, { role: 'user', content: userMsg }],
@@ -76,7 +76,7 @@ const collectData =
 
 const toArray = (msg: string) =>
   pipe(
-    openAiClient.completionWithFirstContent({
+    openAiClient.completionWithText({
       model: 'gpt-4o',
       messages: [
         {

@@ -11,7 +11,7 @@ export const getContextualChunk =
   (trace?: LangfuseParent) =>
   (chunk: Chunk, document: string): TaskEither<Error, Chunk> =>
     pipe(
-      openAiClient.completionWithFirstContent(
+      openAiClient.completionWithText(
         {
           model: 'gpt-4o-mini',
           messages: createContextualChunkMessages(chunk.content, document),

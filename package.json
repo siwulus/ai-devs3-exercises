@@ -16,7 +16,8 @@
     "S03E02": "bun src/S03E02/index.ts",
     "S03E03": "bun src/S03E03/index.ts",
     "S03E04": "bun src/S03E04/index.ts",
-    "S03E05": "bun src/S03E05/index.ts"
+    "S03E05": "bun src/S03E05/index.ts",
+    "S04E01": "bun src/S04E01/index.ts"
   },
   "dependencies": {
     "@microsoft/tiktokenizer": "^1.0.9",

@@ -58,7 +58,7 @@ const buildImageLinkDescription =
     );
 
 const buildPreview = (link: OnLinkData, base64Url: string) =>
-  openAiClient.completionWithFirstContent({
+  openAiClient.completionWithText({
     model: 'gpt-4o',
     messages: [
       previewImageSystemMessage,
@@ -79,7 +79,7 @@ const refineImageLinkDescription = (
   base64Url: string,
 ): TaskEither<Error, ImageLinkDescription> =>
   pipe(
-    openAiClient.completionWithFirstContent({
+    openAiClient.completionWithText({
       model: 'gpt-4o',
       messages: [
         refineImageDescriptionSystemMessage,

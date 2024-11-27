@@ -76,7 +76,7 @@ const findTheAnswer = (question: string): TaskEither<Error, string> => {
     { role: 'system', content: systemPrompt },
     { role: 'user', content: question },
   ];
-  return openAiClient.completionWithFirstContent({ messages, model: 'gpt-4o-mini' });
+  return openAiClient.completionWithText({ messages, model: 'gpt-4o-mini' });
 };
 
 const systemPrompt: string = `Answer the user question. Follow the rules.

@@ -23,7 +23,7 @@ const getReportWithContext =
   (facts: string[], reports: TextFileContent[], trace: LangfuseParent) =>
   (report: TextFileContent): TaskEither<Error, ReportWithContext> =>
     pipe(
-      openAiClient.completionWithFirstContent(
+      openAiClient.completionWithText(
         {
           model: 'gpt-4o',
           messages: [
@@ -48,7 +48,7 @@ const getReportWithKeywords =
   (trace: LangfuseParent) =>
   (report: ReportWithContext): TaskEither<Error, ReportWithKeywords> =>
     pipe(
-      openAiClient.completionWithFirstContent(
+      openAiClient.completionWithText(
         {
           model: 'gpt-4o',
           messages: [

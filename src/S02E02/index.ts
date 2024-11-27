@@ -18,10 +18,7 @@ const findCity = () =>
       getMaps(),
       map(buildPromptMessages),
       chain(messages =>
-        openAiClient.completionWithFirstContent(
-          { messages, model: 'gpt-4o', temperature: 0.2 },
-          trace,
-        ),
+        openAiClient.completionWithText({ messages, model: 'gpt-4o', temperature: 0.2 }, trace),
       ),
     ),
   );

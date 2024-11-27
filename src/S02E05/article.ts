@@ -28,7 +28,7 @@ const replaceAltText = (acc: string, link: LinkDescription): string => {
 
 export const getLinksContextBasedOnArticle = (article: string) =>
   pipe(
-    openAiClient.completionWithFirstContent({
+    openAiClient.completionWithText({
       model: 'gpt-4o',
       messages: [imageContextSystemMessage, { role: 'user', content: article }],
       response_format: zodResponseFormat(LinksContext, 'links_context'),

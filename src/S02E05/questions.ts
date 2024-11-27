@@ -34,7 +34,7 @@ export const answerOneQuestion = (
   question: Question,
 ): TaskEither<Error, QuestionWithAnswer> =>
   pipe(
-    openAiClient.completionWithFirstContent({
+    openAiClient.completionWithText({
       model: 'gpt-4o',
       max_tokens: 2000,
       messages: [

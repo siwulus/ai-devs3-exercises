@@ -27,7 +27,7 @@ const fetchQuestion = (): TaskEither<Error, string> =>
 
 const findAnswer = (question: string): TaskEither<Error, string> =>
   pipe(
-    openAiClient.completionWithFirstContent({
+    openAiClient.completionWithText({
       messages: [
         { role: 'system', content: 'Answer the question with number and only with number' },
         {

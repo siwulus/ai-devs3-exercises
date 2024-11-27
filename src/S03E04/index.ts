@@ -36,7 +36,7 @@ const getInitialInputData =
   (trace?: LangfuseParent) =>
   (content: string): TaskEither<Error, InitialNames> =>
     pipe(
-      openAiClient.completionWithFirstContent(
+      openAiClient.completionWithText(
         {
           model: 'gpt-4o',
           messages: [initialNamesSystemMessage, { role: 'user', content }],
@@ -59,7 +59,7 @@ const queryLLMInLoop =
       map(() => [...history, userMessage]),
       chain(messages =>
         pipe(
-          openAiClient.completionWithFirstContent(
+          openAiClient.completionWithText(
             {
               model: 'gpt-4o',
               messages,

@@ -68,7 +68,7 @@ const witnessesQuestioning = (testimonialsPath: string): TaskEither<Error, strin
     pipe(
       getTestimonials(testimonialsPath),
       chain(testimonials =>
-        openAiClient.completionWithFirstContent(
+        openAiClient.completionWithText(
           {
             messages: [
               { role: 'system', content: buildSystemPrompt(testimonials) },

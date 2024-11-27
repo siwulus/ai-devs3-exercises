@@ -111,7 +111,7 @@ const toImageReport =
   (trace: LangfuseParent) =>
   (image: ImageFileContent): TaskEither<Error, Report> =>
     pipe(
-      openAiClient.completionWithFirstContent(
+      openAiClient.completionWithText(
         {
           model: 'gpt-4o',
           messages: [
@@ -137,7 +137,7 @@ const categorizeReport = (
   trace: LangfuseParent,
 ): TaskEither<Error, CategorizedReport> =>
   pipe(
-    openAiClient.completionWithFirstContent(
+    openAiClient.completionWithText(
       {
         model: 'gpt-4o',
         temperature: 0.3,

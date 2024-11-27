@@ -26,7 +26,7 @@ const categorizeFact =
     fact: TextFileContent,
   ): TaskEither<Error, { classification: FactUsabilityClassification; fact: TextFileContent }> =>
     pipe(
-      openAiClient.completionWithFirstContent(
+      openAiClient.completionWithText(
         {
           model: 'gpt-4o-mini',
           response_format: zodResponseFormat(FactUsabilityClassification, 'classification'),

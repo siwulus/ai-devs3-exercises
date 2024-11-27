@@ -104,7 +104,7 @@ const recalculateMath = (question: string): TaskEither<Error, number> =>
   );
 
 const recalibrateAnswer = (question: string, trace: LangfuseParent): TaskEither<Error, string> =>
-  openAiClient.completionWithFirstContent(
+  openAiClient.completionWithText(
     {
       messages: [
         {

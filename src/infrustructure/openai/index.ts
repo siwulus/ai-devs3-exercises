@@ -1,18 +1,21 @@
+import * as A from 'fp-ts/Array';
 import { pipe } from 'fp-ts/function';
 import * as O from 'fp-ts/Option';
-import { chain, fromOption, map, TaskEither } from 'fp-ts/TaskEither';
+import { chain, fromEither, fromOption, left, map, of, TaskEither } from 'fp-ts/TaskEither';
 import { LangfuseConfig, LangfuseParent, observeOpenAI } from 'langfuse';
 import { OpenAI, toFile } from 'openai';
 import { TranscriptionCreateParams } from 'openai/resources/audio';
-import { EmbeddingCreateParams, Embedding } from 'openai/resources/embeddings';
 import {
   ChatCompletion,
   ChatCompletionCreateParamsNonStreaming,
 } from 'openai/resources/chat/completions';
+import { Embedding, EmbeddingCreateParams } from 'openai/resources/embeddings';
 import { Image, ImageGenerateParams } from 'openai/resources/images';
 import { FileLike } from 'openai/uploads';
+import { match } from 'ts-pattern';
 import { z } from 'zod';
-import { tap, tryExecute } from '../../util/functional.ts';
+import { decode } from '../../util/decode.ts';
+import { tap, tryExecute, tryExecuteE } from '../../util/functional.ts';
 import { logPipe } from '../../util/log.ts';
 
 export const OpenAIParams = z.object({
@@ -25,23 +28,62 @@ export type OpenAIParams = z.infer<typeof OpenAIParams>;
 
 const openai = new OpenAI();
 
-const completionWithFirstContent =
+const completionWithChoice =
   (openai: OpenAI) =>
   (
     params: ChatCompletionCreateParamsNonStreaming,
     langfuseParent?: LangfuseParent,
-  ): TaskEither<Error, string> =>
+  ): TaskEither<Error, ChatCompletion.Choice> =>
     pipe(
       tryExecute('openai.chat.completions.create')(() =>
         observeOpenAI(openai, buildLangfuseConfig(langfuseParent)).chat.completions.create(params),
       ),
       chain((result: ChatCompletion) =>
         pipe(
-          O.fromNullable(result.choices[0].message.content),
+          A.head(result.choices),
           fromOption(() => new Error('No content in response')),
         ),
       ),
-      logPipe('Chat completion response'),
+      chain(choice =>
+        match(choice)
+          .with({ finish_reason: 'content_filter' }, choice =>
+            left(new Error('Content Filter blocked content')),
+          )
+          .with({ finish_reason: 'length' }, choice =>
+            left(new Error('Not enough token to generate response')),
+          )
+          .otherwise(of),
+      ),
+      logPipe('Chat completionWithChoice response'),
+    );
+
+const completionWithText =
+  (openai: OpenAI) =>
+  (
+    params: ChatCompletionCreateParamsNonStreaming,
+    langfuseParent?: LangfuseParent,
+  ): TaskEither<Error, string> =>
+    pipe(
+      completionWithChoice(openai)(params, langfuseParent),
+      chain(choice =>
+        match(choice)
+          .with({ finish_reason: 'stop' }, choice => of(choice.message.content || ''))
+          .otherwise(() => left(new Error('No text content in response'))),
+      ),
+      logPipe('Chat completionWithText response'),
+    );
+
+const completionWithJson =
+  (openai: OpenAI) =>
+  <T>(
+    params: ChatCompletionCreateParamsNonStreaming,
+    schema: z.ZodType<T>,
+    langfuseParent?: LangfuseParent,
+  ): TaskEither<Error, T> =>
+    pipe(
+      completionWithText(openai)(params, langfuseParent),
+      chain(content => fromEither(tryExecuteE('Parse JSON')(() => JSON.parse(content)))),
+      chain(decode(schema)),
     );
 
 const speachToText =
@@ -90,14 +132,16 @@ const buildLangfuseConfig = (parent?: LangfuseParent): LangfuseConfig | undefine
   parent ? { parent } : undefined;
 
 export const openAiClient = {
-  completionWithFirstContent: completionWithFirstContent(openai),
+  completionWithChoice: completionWithChoice(openai),
+  completionWithText: completionWithText(openai),
+  completionWithJson: completionWithJson(openai),
   speachToText: speachToText(openai),
   generateOneImage: generateOneImage(openai),
   createEmbeddings: createEmbeddings(openai),
 };
 
 export const customOpenAiClient = (params: OpenAIParams) => ({
-  completionWithFirstContent: completionWithFirstContent(new OpenAI(params)),
+  completionWithFirstContent: completionWithText(new OpenAI(params)),
 });
 
 export const toOpenAiFile = (buffer: Buffer, name: string): TaskEither<Error, FileLike> =>
