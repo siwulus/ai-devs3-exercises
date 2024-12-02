@@ -2,7 +2,7 @@ import { pipe } from 'fp-ts/function';
 import * as RA from 'fp-ts/ReadonlyArray';
 import { chain, map, sequenceSeqArray, TaskEither } from 'fp-ts/TaskEither';
 import { match } from 'ts-pattern';
-import { OnLinkData } from '../infrustructure/htmlToMarkdown';
+import { OnLinkData } from './htmlToMarkdown';
 import { get } from '../infrustructure/httpClient';
 import { openAiClient, toOpenAiFile } from '../infrustructure/openai';
 import {

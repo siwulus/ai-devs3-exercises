@@ -54,7 +54,6 @@ const completionWithChoice =
           )
           .otherwise(of),
       ),
-      logPipe('Chat completionWithChoice response'),
     );
 
 const completionWithText =
@@ -77,7 +76,7 @@ const completionWithJson =
   (openai: OpenAI) =>
   <T>(
     params: ChatCompletionCreateParamsNonStreaming,
-    schema: z.ZodType<T>,
+    schema: z.ZodSchema<T>,
     langfuseParent?: LangfuseParent,
   ): TaskEither<Error, T> =>
     pipe(

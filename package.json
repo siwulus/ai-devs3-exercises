@@ -18,12 +18,13 @@
     "S03E04": "bun src/S03E04/index.ts",
     "S03E05": "bun src/S03E05/index.ts",
     "S04E01": "bun src/S04E01/index.ts",
-    "S04E02": "bun src/S04E02/index.ts"
+    "S04E02": "bun src/S04E02/index.ts",
+    "S04E03": "bun src/S04E03/index.ts"
   },
   "dependencies": {
     "@microsoft/tiktokenizer": "^1.0.9",
     "@qdrant/js-client-rest": "^1.12.0",
-    "bun": "latest",
+    "bun": "^1.1.38",
     "express": "^5.0.1",
     "fp-ts": "^2.16.9",
     "io-ts": "^2.2.21",
@@ -44,9 +45,9 @@
     "@types/express": "^5.0.0",
     "@types/neo4j": "^2.0.6",
     "@types/ramda": "^0.30.2",
-    "@types/uuid": "^10.0.0",
     "@types/turndown": "^5.0.5",
-    "bun-types": "latest",
+    "@types/uuid": "^10.0.0",
+    "bun-types": "^1.1.38",
     "prettier": "^3.3.3"
   },
   "peerDependencies": {

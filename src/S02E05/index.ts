@@ -6,7 +6,7 @@ import path from 'path';
 import { mergeRight } from 'ramda';
 import { saveTextFile } from '../infrustructure/filesystem';
 import { reportToHeadquarter } from '../infrustructure/headquoter';
-import { convertHtmlToMarkdown } from '../infrustructure/htmlToMarkdown';
+import { convertHtmlToMarkdown } from './htmlToMarkdown';
 import { get } from '../infrustructure/httpClient';
 import { toPromise } from '../util/functional.ts';
 import { enrichArticle, getArticleAsHtml, getLinksContextBasedOnArticle } from './article.ts';
